@@ -1,0 +1,52 @@
+site_name: arboribus
+repo_url: https://github.com/9hgg/arboribus
+site_url: https://9hgg.github.io/arboribus
+site_description: Sync folders to split/merge/partially share monorepos
+site_author: Joris GUERRY
+edit_uri: edit/main/docs/
+repo_name: 9hgg/arboribus
+copyright: Maintained by <a href="https://9hgg.com">9hgg</a>.
+
+nav:
+  - Home: index.md
+  - Modules: modules.md
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: ["arboribus"]
+theme:
+  name: material
+  feature:
+    tabs: true
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: white
+      accent: deep orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: deep orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/9hgg/arboribus
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/arboribus
+
+markdown_extensions:
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
