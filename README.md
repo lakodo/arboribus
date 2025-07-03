@@ -11,58 +11,224 @@ Sync folders to split/merge/partially share monorepos
 - **Github repository**: <https://github.com/9hgg/arboribus/>
 - **Documentation** <https://9hgg.github.io/arboribus/>
 
-## Getting started with your project
+## Usage
 
-### 1. Create a New Repository
+Arboribus helps you sync specific folders and files from a monorepo to external target repositories. This is useful for sharing common libraries, tools, or configurations between repositories while keeping them synchronized.
 
-First, create a repository on GitHub with the same name as this project, and then run the following commands:
+### Basic Workflow
 
-```bash
-git init -b main
-git add .
-git commit -m "init commit"
-git remote add origin git@github.com:9hgg/arboribus.git
-git push -u origin main
-```
+1. **Initialize** a configuration in your monorepo
+2. **Add rules** to specify which files/folders to sync
+3. **Apply** the sync to copy files to target repositories
 
-### 2. Set Up Your Development Environment
-
-Then, install the environment and the pre-commit hooks with
+### Quick Start Example
 
 ```bash
-make install
+# Initialize arboribus in your monorepo
+arboribus init --target /path/to/target-repo --name shared-libs
+
+# Add sync rules for specific folders
+arboribus add-rule --pattern "libs/auth" --target shared-libs
+arboribus add-rule --pattern "libs/admin" --target shared-libs
+
+# Preview what will be synced
+arboribus apply --dry
+
+# Apply the sync
+arboribus apply
 ```
 
-This will also generate your `uv.lock` file
+## Commands
 
-### 3. Run the pre-commit hooks
+### `arboribus init`
 
-Initially, the CI/CD pipeline might be failing due to formatting issues. To resolve those run:
+Initialize arboribus configuration in your monorepo.
 
 ```bash
-uv run pre-commit run -a
+# Initialize with a target repository
+arboribus init --target /path/to/target-repo --name my-target
+
+# Initialize without a target (add targets later)
+arboribus init --source /path/to/monorepo
 ```
 
-### 4. Commit the changes
+**Options:**
+- `--source, -s`: Source root directory (default: current directory)
+- `--target, -t`: Target directory path
+- `--name, -n`: Name for the target
 
-Lastly, commit the changes made by the two steps above to your repository.
+### `arboribus add-rule`
+
+Add sync rules to specify which files/folders to include.
 
 ```bash
-git add .
-git commit -m 'Fix formatting issues'
-git push origin main
+# Add a folder to sync
+arboribus add-rule --pattern "libs/auth" --target shared-libs
+
+# Add files with glob patterns
+arboribus add-rule --pattern "src/**/*.py" --target shared-libs
+
+# Add with exclude patterns
+arboribus add-rule --pattern "docs/*" --target shared-libs --exclude "docs/internal/*"
 ```
 
-You are now ready to start development on your project!
-The CI/CD pipeline will be triggered when you open a pull request, merge to main, or when you create a new release.
+**Options:**
+- `--pattern, -p`: Glob pattern to include (required)
+- `--target, -t`: Target name (required)
+- `--exclude, -e`: Exclude pattern
+- `--source, -s`: Source root directory
 
-To finalize the set-up for publishing to PyPI, see [here](https://fpgmaas.github.io/cookiecutter-uv/features/publishing/#set-up-for-pypi).
-For activating the automatic documentation with MkDocs, see [here](https://fpgmaas.github.io/cookiecutter-uv/features/mkdocs/#enabling-the-documentation-on-github).
-To enable the code coverage reports, see [here](https://fpgmaas.github.io/cookiecutter-uv/features/codecov/).
+### `arboribus remove-rule`
 
-## Releasing a new version
+Remove sync rules from a target.
 
+```bash
+arboribus remove-rule --pattern "libs/auth" --target shared-libs
+```
 
+**Options:**
+- `--pattern, -p`: Pattern to remove (required)
+- `--target, -t`: Target name (required)
+- `--source, -s`: Source root directory
+
+### `arboribus list-rules`
+
+List all configured sync rules and their matched paths.
+
+```bash
+arboribus list-rules
+```
+
+**Options:**
+- `--source, -s`: Source root directory
+
+### `arboribus apply`
+
+Apply the sync rules to copy files to target repositories.
+
+```bash
+# Dry run (preview without making changes)
+arboribus apply --dry
+
+# Apply all rules
+arboribus apply
+
+# Apply with filters
+arboribus apply --filter "libs/*"
+
+# Reverse sync (from target back to source)
+arboribus apply --reverse
+```
+
+**Options:**
+- `--dry, -d`: Dry run - show what would be done
+- `--reverse, -r`: Sync from target to source
+- `--filter, -f`: Filter to specific pattern
+- `--stats-only`: Only show statistics, don't sync
+- `--replace-existing`: Replace existing files/directories in target
+- `--source, -s`: Source root directory
+
+### `arboribus print-config`
+
+Print the current configuration.
+
+```bash
+# Print as table
+arboribus print-config
+
+# Print as JSON
+arboribus print-config --format json
+```
+
+**Options:**
+- `--format, -f`: Output format (table or json)
+- `--source, -s`: Source root directory
+
+## Examples
+
+### Sharing Common Libraries
+
+```bash
+# Set up sync for shared libraries
+arboribus init --target ../shared-libs-repo --name shared-libs
+
+# Add authentication library
+arboribus add-rule --pattern "libs/auth" --target shared-libs
+
+# Add utility functions
+arboribus add-rule --pattern "libs/utils" --target shared-libs
+
+# Exclude test files
+arboribus add-rule --pattern "libs/core" --target shared-libs --exclude "libs/core/tests/*"
+
+# Apply the sync
+arboribus apply
+```
+
+### Syncing Documentation
+
+```bash
+# Set up documentation sync
+arboribus init --target ../docs-repo --name docs
+
+# Add all markdown files
+arboribus add-rule --pattern "docs/**/*.md" --target docs
+
+# Add images but exclude large files
+arboribus add-rule --pattern "docs/**/*.png" --target docs
+arboribus add-rule --pattern "docs/**/*.jpg" --target docs --exclude "docs/archive/*"
+
+# Preview and apply
+arboribus apply --dry
+arboribus apply
+```
+
+### Multiple Targets
+
+```bash
+# Initialize multiple targets
+arboribus init --target ../frontend-shared --name frontend
+arboribus init --target ../backend-shared --name backend
+
+# Add frontend-specific rules
+arboribus add-rule --pattern "packages/ui-components" --target frontend
+arboribus add-rule --pattern "packages/utils" --target frontend
+
+# Add backend-specific rules
+arboribus add-rule --pattern "libs/auth" --target backend
+arboribus add-rule --pattern "libs/database" --target backend
+
+# Apply to specific targets
+arboribus apply --filter "packages/*"  # Only frontend patterns
+arboribus apply
+```
+
+## Installation
+
+### Using pip
+
+```bash
+pip install arboribus
+```
+
+### Using uv
+
+```bash
+uv add arboribus
+```
+
+### From source
+
+```bash
+git clone https://github.com/9hgg/arboribus.git
+cd arboribus
+uv sync
+uv run arboribus --help
+```
+
+## Development
+
+For development setup and contributing guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
