@@ -2,20 +2,19 @@
 
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
-import shutil
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from arboribus.core import (
-    resolve_patterns,
     collect_files_recursive,
-    get_file_statistics,
     get_default_source,
-    process_file_sync,
-    process_directory_sync,
-    sync_directory,
+    get_file_statistics,
     get_git_tracked_files,
+    process_directory_sync,
+    process_file_sync,
+    resolve_patterns,
+    sync_directory,
 )
 
 
@@ -42,7 +41,7 @@ def test_resolve_patterns_git_filtering_exact_paths(temp_dirs):
     # Git tracks the directory name exactly
     git_tracked = {"exact"}  # Exact match
     patterns = ["exact"]
-    
+
     # This should trigger line 87->97 (exact match branch)
     result = resolve_patterns(source_dir, patterns, git_tracked_files=git_tracked)
     assert len(result) == 1
@@ -61,7 +60,7 @@ def test_resolve_patterns_git_filtering_no_match(temp_dirs):
     # Git tracking doesn't include this directory
     git_tracked = {"other/file.py"}  # Completely different path
     patterns = ["nomatch"]
-    
+
     # This should trigger lines 98-99 (continue when no tracked files)
     result = resolve_patterns(source_dir, patterns, git_tracked_files=git_tracked)
     assert len(result) == 0  # Should be filtered out
@@ -79,9 +78,9 @@ def test_resolve_patterns_exclude_matching(temp_dirs):
 
     patterns = ["*"]
     exclude_patterns = ["excluded"]
-    
+
     result = resolve_patterns(source_dir, patterns, exclude_patterns=exclude_patterns)
-    
+
     # Should include 'included' but exclude 'excluded'
     result_names = {p.name for p in result}
     assert "included" in result_names
@@ -96,7 +95,7 @@ def test_collect_files_recursive_source_root_detection(temp_dirs):
     deep_dir = source_dir / "deep" / "nested"
     deep_dir.mkdir(parents=True)
     (deep_dir / "file.py").write_text("content")
-    
+
     # Put config file in source_dir
     (source_dir / "arboribus.toml").write_text("[targets]")
 
@@ -120,7 +119,7 @@ def test_process_directory_sync_copytree_error_handling(temp_dirs):
         was_processed, message = process_directory_sync(
             test_dir, target_test_dir, source_dir, None, dry=False
         )
-        
+
         # Should handle error gracefully (lines 383, 390-391)
         assert was_processed is False
         assert "error" in message.lower()
@@ -139,7 +138,7 @@ def test_process_file_sync_copy_error_handling(temp_dirs):
         was_processed, message = process_file_sync(
             source_file, target_file, source_dir, None, dry=False
         )
-        
+
         # Should handle error gracefully (lines 313, 329-330)
         assert was_processed is False
         assert "error" in message.lower()
@@ -154,10 +153,10 @@ def test_sync_directory_with_complex_filtering(temp_dirs):
 
     # Create simple structure
     (source_dir / "test.py").write_text("content")
-    
+
     # Test that sync_directory can run without git filtering (normal case)
     sync_directory(source_dir, target_dir, reverse=False, dry=False, git_tracked_files=None)
-    
+
     # Should copy everything when no git filtering
     assert (target_dir / "test.py").exists()
     assert not (target_dir / "untracked_dir").exists()
@@ -183,7 +182,7 @@ def test_get_default_source_filesystem_root():
     with patch("pathlib.Path.cwd") as mock_cwd:
         root_path = Path("/")
         mock_cwd.return_value = root_path
-        
+
         # Should return None when reaching root without finding config
         result = get_default_source()
         assert result is None
@@ -193,7 +192,7 @@ def test_process_directory_sync_ignore_function_edge_cases(temp_dirs):
     """Test process_directory_sync with basic functionality."""
     source_dir, target_dir = temp_dirs
 
-    # Create arboribus.toml 
+    # Create arboribus.toml
     (source_dir / "arboribus.toml").write_text("")
 
     # Create source with simple structure
@@ -228,7 +227,7 @@ def test_resolve_patterns_glob_with_include_files_and_git(temp_dirs):
     result = resolve_patterns(
         source_dir, patterns, git_tracked_files=git_tracked, include_files=True
     )
-    
+
     # Should only include tracked file
     assert len(result) == 1
     assert result[0].name == "tracked.txt"
@@ -265,7 +264,7 @@ def test_process_file_sync_mkdir_error(temp_dirs):
 
     source_file = source_dir / "test.txt"
     source_file.write_text("content")
-    
+
     # Target in deeply nested path
     target_file = target_dir / "deep" / "nested" / "test.txt"
 
@@ -274,7 +273,7 @@ def test_process_file_sync_mkdir_error(temp_dirs):
         was_processed, message = process_file_sync(
             source_file, target_file, source_dir, None, dry=False
         )
-        
+
         # Should handle mkdir error gracefully
         assert was_processed is False
         assert "error" in message.lower()
@@ -317,7 +316,7 @@ file3.md
 
     with patch("subprocess.run", side_effect=mock_subprocess):
         result = get_git_tracked_files(source_dir)
-        
+
         # Should handle complex whitespace and empty lines
         expected = {"file1.py", "file2.txt", "file3.md"}
         assert result == expected
@@ -341,7 +340,7 @@ def test_process_directory_sync_replace_existing_error(temp_dirs):
         was_processed, message = process_directory_sync(
             test_dir, target_test_dir, source_dir, None, dry=False, replace_existing=True
         )
-        
+
         # Should handle rmtree error gracefully
         assert was_processed is False
         assert "error" in message.lower()

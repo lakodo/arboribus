@@ -2,28 +2,25 @@
 
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
-import subprocess
+from unittest.mock import MagicMock, patch
 
 import pytest
-import toml
-from toml.decoder import TomlDecodeError
 from toml.decoder import TomlDecodeError
 
 from arboribus.core import (
-    get_config_path,
-    load_config,
-    save_config,
-    get_git_tracked_files,
-    resolve_patterns,
     collect_files_recursive,
-    get_file_statistics,
+    get_config_path,
     get_default_source,
     get_file_checksum,
+    get_file_statistics,
+    get_git_tracked_files,
     is_same_file_content,
-    process_file_sync,
+    load_config,
     process_directory_sync,
+    process_file_sync,
     process_path,
+    resolve_patterns,
+    save_config,
     sync_directory,
 )
 
@@ -736,7 +733,7 @@ def test_resolve_patterns_complex_git_filtering(temp_dirs):
     # Create additional files for testing
     (source_dir / "docs").mkdir()
     (source_dir / "docs" / "readme.md").write_text("docs")
-    (source_dir / "tests").mkdir() 
+    (source_dir / "tests").mkdir()
     (source_dir / "tests" / "test.py").write_text("test")
 
     # Only some files are tracked
@@ -804,7 +801,7 @@ def test_process_file_sync_edge_cases(temp_dirs):
     source_file = source_dir / "test.txt"
     target_file = target_dir / "test.txt"
     content = "same content"
-    
+
     source_file.write_text(content)
     target_file.write_text(content)
 
@@ -829,7 +826,7 @@ def test_process_directory_sync_with_existing_files(temp_dirs):
 
     # Sync should create the directory
     was_processed, message = process_directory_sync(test_dir, target_test_dir, source_dir, None, dry=False)
-    
+
     assert was_processed is True
     assert (target_test_dir / "file1.txt").exists()
     assert (target_test_dir / "file2.txt").exists()
@@ -857,7 +854,7 @@ def test_sync_directory_full_scenarios(temp_dirs):
     # Test reverse sync (dry run)
     new_target = source_dir.parent / "new_target"
     new_target.mkdir()
-    
+
     sync_directory(target_dir, new_target, reverse=True, dry=True)
     # In dry run, files shouldn't be created
     assert not (new_target / "dir1").exists()
@@ -868,10 +865,10 @@ def test_load_config_with_missing_targets_key():
     with tempfile.TemporaryDirectory() as temp_dir:
         source_dir = Path(temp_dir)
         config_path = source_dir / "arboribus.toml"
-        
+
         # Create valid TOML without targets key
         config_path.write_text('[other]\nkey = "value"\n')
-        
+
         # Should still load successfully, function handles missing keys
         config = load_config(source_dir)
         assert isinstance(config, dict)
@@ -891,10 +888,10 @@ def test_resolve_patterns_file_with_git_filter(temp_dirs):
     # Test with file patterns and git filter
     git_tracked = {"tracked.py"}
     patterns = ["*.py"]
-    
+
     # Should find files when include_files=True and git filtering
     result = resolve_patterns(source_dir, patterns, git_tracked_files=git_tracked, include_files=True)
-    
+
     # Should only include tracked files
     assert len(result) == 1
     assert result[0].name == "tracked.py"
@@ -911,9 +908,9 @@ def test_resolve_patterns_directory_exact_match_git(temp_dirs):
     # Git tracking includes the directory name exactly
     git_tracked = {"exact_match"}  # Exact directory name in git
     patterns = ["exact_match"]
-    
+
     result = resolve_patterns(source_dir, patterns, git_tracked_files=git_tracked)
-    
+
     # Should include the directory because it exactly matches git tracking
     assert len(result) == 1
     assert result[0].name == "exact_match"
@@ -931,9 +928,9 @@ def test_resolve_patterns_exclude_with_files(temp_dirs):
 
     patterns = ["*.txt"]
     exclude_patterns = ["exclude.txt"]
-    
+
     result = resolve_patterns(source_dir, patterns, exclude_patterns=exclude_patterns, include_files=True)
-    
+
     # Should only include non-excluded files
     assert len(result) == 1
     assert result[0].name == "include.txt"
@@ -949,7 +946,7 @@ def test_collect_files_recursive_root_files(temp_dirs):
 
     # Collect from source_dir itself
     files = collect_files_recursive(source_dir, source_dir)
-    
+
     # Should include all files (both direct and from subdirectories)
     file_names = {f.name for f in files}
     assert "root1.txt" in file_names
@@ -986,7 +983,7 @@ def test_get_file_statistics_files_with_git_filter(temp_dirs):
     # Test with individual files and git filter
     git_tracked = {"tracked.py"}
     paths = [file1, file2]  # Pass individual files, not directories
-    
+
     stats = get_file_statistics(paths, source_dir, git_tracked_files=git_tracked)
 
     # Should only count tracked files
@@ -1012,7 +1009,7 @@ def test_process_directory_sync_replace_existing(temp_dirs):
     was_processed, message = process_directory_sync(
         test_dir, target_test_dir, source_dir, None, dry=False, replace_existing=True
     )
-    
+
     assert was_processed is True
     assert (target_test_dir / "new_file.txt").exists()
     # Old file should be removed due to replace_existing=True
@@ -1032,11 +1029,11 @@ def test_process_directory_sync_git_filter_edge_cases(temp_dirs):
 
     # Test with git tracking that includes subdirectory
     git_tracked = {"level1/level2/deep_file.txt"}
-    
+
     was_processed, message = process_directory_sync(
         nested_dir, target_nested, source_dir, git_tracked, dry=False
     )
-    
+
     # Should process because directory contains tracked files
     assert was_processed is True
     assert (target_nested / "deep_file.txt").exists()
@@ -1049,7 +1046,7 @@ def test_default_source_edge_cases():
         # Mock being at root directory
         root = Path("/")
         mock_cwd.return_value = root
-        
+
         # Should return None when no config found at root
         result = get_default_source()
         assert result is None
@@ -1061,7 +1058,7 @@ def test_save_config_directory_creation(temp_dirs):
 
     # Create subdirectory that doesn't exist yet
     nested_dir = source_dir / "nested" / "config"
-    
+
     # This should work because save_config should handle directory creation
     # or fail gracefully
     try:
@@ -1082,19 +1079,19 @@ def test_process_path_symlink_handling(temp_dirs):
     try:
         link_target = source_dir / "target_file.txt"
         link_target.write_text("target content")
-        
+
         symlink = source_dir / "symlink"
         symlink.symlink_to(link_target)
-        
+
         target_path = target_dir / "symlink"
-        
+
         # Test how process_path handles symlinks
         was_processed, message = process_path(symlink, target_path, source_dir, None, dry=False)
-        
+
         # Behavior depends on implementation - just ensure it doesn't crash
         assert isinstance(was_processed, bool)
         assert isinstance(message, str)
-        
+
     except (OSError, NotImplementedError):
         # Skip if symlinks not supported on this platform
         pass

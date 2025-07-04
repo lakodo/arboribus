@@ -364,8 +364,9 @@ def test_command_without_source_no_default():
 
 def test_main_function_no_args():
     """Test main function with no arguments shows help."""
-    from arboribus.cli import main
     import sys
+
+    from arboribus.cli import main
 
     # Mock sys.argv to have only the script name
     original_argv = sys.argv
@@ -384,8 +385,9 @@ def test_main_function_no_args():
 
 def test_main_function_with_args():
     """Test main function with arguments."""
-    from arboribus.cli import main
     import sys
+
+    from arboribus.cli import main
 
     # Mock sys.argv with some arguments
     original_argv = sys.argv

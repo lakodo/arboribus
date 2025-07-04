@@ -368,15 +368,15 @@ def test_directory_filtering_with_mixed_file_and_dir_patterns(temp_structure):
 def test_line_86_file_continue_statement(temp_structure):
     """Test line 86: continue statement for untracked files."""
     source_dir = temp_structure
-    
+
     # Create a file that is NOT tracked
     (source_dir / "untracked_file.py").write_text("# untracked")
-    
+
     git_tracked_files = {"tracked_dir/file1.py"}  # untracked_file.py not included
     patterns = ["untracked_file.py", "tracked_dir"]  # Mix untracked file with tracked dir
-    
+
     result = resolve_patterns(source_dir, patterns, git_tracked_files=git_tracked_files, include_files=True)
-    
+
     # Should only include tracked_dir, untracked_file.py should hit continue on line 86
     assert len(result) == 1
     assert result[0] == source_dir / "tracked_dir"
@@ -385,12 +385,12 @@ def test_line_86_file_continue_statement(temp_structure):
 def test_line_95_directory_continue_statement(temp_structure):
     """Test line 95: continue statement for directories with no tracked files."""
     source_dir = temp_structure
-    
+
     git_tracked_files = {"tracked_dir/file1.py"}  # Only tracked_dir has files
     patterns = ["untracked_dir", "empty_dir", "tracked_dir"]  # Mix untracked dirs with tracked
-    
+
     result = resolve_patterns(source_dir, patterns, git_tracked_files=git_tracked_files)
-    
+
     # Should only include tracked_dir, others should hit continue on line 95
     assert len(result) == 1
     assert result[0] == source_dir / "tracked_dir"
@@ -399,17 +399,16 @@ def test_line_95_directory_continue_statement(temp_structure):
 def test_line_98_99_exclude_patterns_continue(temp_structure):
     """Test lines 98-99: exclude patterns continue statement."""
     source_dir = temp_structure
-    
+
     # Test exclude patterns that should trigger the continue statement
-    git_tracked_files = {
-        "tracked_dir/file1.py", 
-        "partially_tracked/tracked.py"
-    }
+    git_tracked_files = {"tracked_dir/file1.py", "partially_tracked/tracked.py"}
     patterns = ["tracked_dir", "partially_tracked"]
     exclude_patterns = ["partially_tracked"]  # Exclude one of the tracked directories
-    
-    result = resolve_patterns(source_dir, patterns, exclude_patterns=exclude_patterns, git_tracked_files=git_tracked_files)
-    
+
+    result = resolve_patterns(
+        source_dir, patterns, exclude_patterns=exclude_patterns, git_tracked_files=git_tracked_files
+    )
+
     # Should only include tracked_dir, partially_tracked should hit continue on line 99
     assert len(result) == 1
     assert result[0] == source_dir / "tracked_dir"
@@ -418,32 +417,28 @@ def test_line_98_99_exclude_patterns_continue(temp_structure):
 def test_multiple_continue_statements_in_sequence(temp_structure):
     """Test hitting multiple different continue statements."""
     source_dir = temp_structure
-    
+
     # Create additional test files/dirs
     (source_dir / "untracked_file.txt").write_text("# untracked file")
     (source_dir / "excluded_dir").mkdir()
     (source_dir / "excluded_dir" / "file.py").write_text("# excluded")
-    
+
     git_tracked_files = {
         "tracked_dir/file1.py",  # tracked_dir is tracked
         "excluded_dir/file.py",  # excluded_dir is tracked but will be excluded
     }
     patterns = [
         "untracked_file.txt",  # Should hit line 86 continue (untracked file)
-        "untracked_dir",       # Should hit line 95 continue (untracked directory)
-        "excluded_dir",        # Should hit line 99 continue (excluded directory)
-        "tracked_dir"          # Should be included
+        "untracked_dir",  # Should hit line 95 continue (untracked directory)
+        "excluded_dir",  # Should hit line 99 continue (excluded directory)
+        "tracked_dir",  # Should be included
     ]
     exclude_patterns = ["excluded_dir"]
-    
+
     result = resolve_patterns(
-        source_dir, 
-        patterns, 
-        exclude_patterns=exclude_patterns,
-        git_tracked_files=git_tracked_files,
-        include_files=True
+        source_dir, patterns, exclude_patterns=exclude_patterns, git_tracked_files=git_tracked_files, include_files=True
     )
-    
+
     # Only tracked_dir should be included, all others should hit various continue statements
     assert len(result) == 1
     assert result[0] == source_dir / "tracked_dir"
@@ -452,25 +447,25 @@ def test_multiple_continue_statements_in_sequence(temp_structure):
 def test_any_function_generator_expression_execution(temp_structure):
     """Test that the any() function generator expression is fully executed."""
     source_dir = temp_structure
-    
+
     # Create a directory structure that will cause the any() function to iterate
     # through multiple git tracked files before finding/not finding a match
     (source_dir / "test_dir").mkdir()
     (source_dir / "test_dir" / "file1.py").write_text("# file 1")
-    
+
     # Create git tracked files that don't match the directory we're testing
     # This should cause the generator expression to evaluate multiple conditions
     git_tracked_files = {
-        "other_dir/file1.py",      # Doesn't start with "test_dir/"
-        "another_dir/file2.py",    # Doesn't start with "test_dir/"
+        "other_dir/file1.py",  # Doesn't start with "test_dir/"
+        "another_dir/file2.py",  # Doesn't start with "test_dir/"
         "different_dir/file3.py",  # Doesn't start with "test_dir/"
         "test_dir_different/file.py",  # Similar name but different
-        "test_dir"  # Exact match - this should make has_tracked_files True
+        "test_dir",  # Exact match - this should make has_tracked_files True
     }
     patterns = ["test_dir"]
-    
+
     result = resolve_patterns(source_dir, patterns, git_tracked_files=git_tracked_files)
-    
+
     # Should be included because "test_dir" is an exact match
     assert len(result) == 1
     assert result[0] == source_dir / "test_dir"
@@ -479,17 +474,17 @@ def test_any_function_generator_expression_execution(temp_structure):
 def test_has_tracked_files_false_forces_continue_line_95(temp_structure):
     """Test specifically to force line 95 continue statement execution."""
     source_dir = temp_structure
-    
+
     # Create directory that has NO tracked files
     (source_dir / "completely_untracked").mkdir()
     (source_dir / "completely_untracked" / "file.py").write_text("# untracked")
-    
+
     # Use EMPTY git tracked files set - this forces any() to return False
     git_tracked_files = set()  # Empty set - no files are tracked!
     patterns = ["completely_untracked"]
-    
+
     result = resolve_patterns(source_dir, patterns, git_tracked_files=git_tracked_files)
-    
+
     # Should be empty because completely_untracked has no tracked files
     # This should execute: has_tracked_files = any(...) -> False
     # Then: if not has_tracked_files: continue -> line 95
@@ -499,13 +494,13 @@ def test_has_tracked_files_false_forces_continue_line_95(temp_structure):
 def test_empty_git_tracked_files_forces_any_false(temp_structure):
     """Test with empty git_tracked_files to force any() to return False."""
     source_dir = temp_structure
-    
+
     # Multiple directories, but NO tracked files
     git_tracked_files = set()  # Empty - no files tracked at all
     patterns = ["tracked_dir", "untracked_dir", "empty_dir"]
-    
+
     result = resolve_patterns(source_dir, patterns, git_tracked_files=git_tracked_files)
-    
+
     # All directories should be filtered out because any() returns False for all
     assert len(result) == 0
 
@@ -513,18 +508,18 @@ def test_empty_git_tracked_files_forces_any_false(temp_structure):
 def test_line_95_continue_with_tracing(temp_structure):
     """Test line 95 continue with explicit tracing."""
     source_dir = temp_structure
-    
+
     # Create multiple directories to ensure we go through the loop multiple times
     (source_dir / "dir1").mkdir()
-    (source_dir / "dir2").mkdir() 
+    (source_dir / "dir2").mkdir()
     (source_dir / "dir3").mkdir()
-    
+
     # Empty git tracked files - should cause all directories to hit continue on line 95
     git_tracked_files = set()
     patterns = ["dir1", "dir2", "dir3", "tracked_dir", "untracked_dir"]
-    
+
     result = resolve_patterns(source_dir, patterns, git_tracked_files=git_tracked_files)
-    
+
     # All should be filtered out due to empty git tracking
     assert len(result) == 0
 
@@ -532,33 +527,29 @@ def test_line_95_continue_with_tracing(temp_structure):
 def test_mixed_scenarios_force_all_continue_paths(temp_structure):
     """Test to force all different continue statements to execute."""
     source_dir = temp_structure
-    
+
     # Create files and directories for comprehensive testing
     (source_dir / "untracked_file.py").write_text("# untracked file")
     (source_dir / "empty_tracked_dir").mkdir()
-    (source_dir / "excluded_tracked_dir").mkdir() 
+    (source_dir / "excluded_tracked_dir").mkdir()
     (source_dir / "excluded_tracked_dir" / "file.py").write_text("# tracked but excluded")
-    
+
     # Mix of scenarios:
     # - empty git tracked files should cause line 95 continue for directories
-    # - untracked files should cause line 86 continue 
+    # - untracked files should cause line 86 continue
     # - exclude patterns should cause line 99 continue
     git_tracked_files = set()  # Empty set
     patterns = [
-        "untracked_file.py",     # File, should be filtered by git (line 86)
-        "empty_tracked_dir",     # Dir, should be filtered by git (line 95) 
+        "untracked_file.py",  # File, should be filtered by git (line 86)
+        "empty_tracked_dir",  # Dir, should be filtered by git (line 95)
         "excluded_tracked_dir",  # Dir, would be filtered by exclude (but git first)
     ]
     exclude_patterns = ["excluded_tracked_dir"]
-    
+
     result = resolve_patterns(
-        source_dir, 
-        patterns, 
-        exclude_patterns=exclude_patterns,
-        git_tracked_files=git_tracked_files,
-        include_files=True
+        source_dir, patterns, exclude_patterns=exclude_patterns, git_tracked_files=git_tracked_files, include_files=True
     )
-    
+
     # All should be filtered out by git filtering (empty set)
     assert len(result) == 0
 
@@ -566,25 +557,25 @@ def test_mixed_scenarios_force_all_continue_paths(temp_structure):
 def test_generator_expression_multiple_iterations(temp_structure):
     """Test generator expression with multiple iterations to hit lines 90-91."""
     source_dir = temp_structure
-    
+
     # Create a scenario where the generator needs to check many files
     (source_dir / "target_dir").mkdir()
-    
+
     # Create many git tracked files that will cause multiple iterations
     # of the generator expression before finding a match
     git_tracked_files = set()
-    
+
     # Add many unrelated files first
     for i in range(20):
         git_tracked_files.add(f"unrelated_{i}/file.py")
-    
+
     # Add one file that will match via startswith
     git_tracked_files.add("target_dir/matching_file.py")
-    
+
     patterns = ["target_dir"]
-    
+
     result = resolve_patterns(source_dir, patterns, git_tracked_files=git_tracked_files)
-    
+
     # Should be included because "target_dir/matching_file.py" starts with "target_dir/"
     assert len(result) == 1
     assert result[0] == source_dir / "target_dir"
