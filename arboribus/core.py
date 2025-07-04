@@ -74,32 +74,31 @@ def resolve_patterns(
     for pattern in patterns:
         # First, try direct path matching (for patterns like "frontend")
         direct_path = source_dir / pattern
-        if direct_path.exists():
-            if direct_path.is_dir() or (include_files and direct_path.is_file()):
-                path_relative = direct_path.relative_to(source_dir)
+        if direct_path.exists() and (direct_path.is_dir() or (include_files and direct_path.is_file())):
+            path_relative = direct_path.relative_to(source_dir)
 
-                # Apply git filtering if available
-                if git_tracked_files is not None:
-                    if direct_path.is_file():
-                        # For files, check if they're tracked
-                        if str(path_relative) not in git_tracked_files:
-                            continue
-                    elif direct_path.is_dir():
-                        # For directories, check if they contain any tracked files
-                        has_tracked_files = any(
-                            tracked_file.startswith(str(path_relative) + "/") or tracked_file == str(path_relative)
-                            for tracked_file in git_tracked_files
-                        )
-                        if not has_tracked_files:
-                            continue
-
-                # Apply exclude patterns if specified
-                if exclude_patterns:
-                    if any(str(path_relative).startswith(f) for f in exclude_patterns):
+            # Apply git filtering if available
+            if git_tracked_files is not None:
+                if direct_path.is_file():
+                    # For files, check if they're tracked
+                    if str(path_relative) not in git_tracked_files:
+                        continue
+                elif direct_path.is_dir():
+                    # For directories, check if they contain any tracked files
+                    has_tracked_files = any(
+                        tracked_file.startswith(str(path_relative) + "/") or tracked_file == str(path_relative)
+                        for tracked_file in git_tracked_files
+                    )
+                    if not has_tracked_files:
                         continue
 
-                matched_paths.append(direct_path)
-                continue
+            # Apply exclude patterns if specified
+            if exclude_patterns:
+                if any(str(path_relative).startswith(f) for f in exclude_patterns):
+                    continue
+
+            matched_paths.append(direct_path)
+            continue
 
         # Then try glob pattern matching
         full_pattern = source_dir / pattern

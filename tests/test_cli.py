@@ -533,13 +533,17 @@ def test_if_name_main():
     """Test the if __name__ == '__main__' block."""
     import subprocess
     import sys
+    from pathlib import Path
+
+    # Get the project root directory (parent of tests directory)
+    project_root = Path(__file__).parent.parent
 
     # Test running the module directly
     result = subprocess.run(
         [sys.executable, "-m", "arboribus.cli", "--help"],
         capture_output=True,
         text=True,
-        cwd="/Users/jogue/workspace/lako/arboribus",
+        cwd=str(project_root),
     )
 
     assert result.returncode == 0

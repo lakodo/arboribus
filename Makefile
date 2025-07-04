@@ -27,6 +27,11 @@ test: ## Test the code with pytest
 	@echo "🚀 Testing code: Running pytest"
 	@uv run python -m pytest --cov --cov-config=pyproject.toml --cov-report=xml
 
+.PHONY: test-core
+test-core: ## Test the core module with pytest
+	@echo "🚀 Testing core module: Running pytest"
+	@uv run python -m pytest --cov=arboribus.core --cov-report=term-missing --cov-report=json
+
 .PHONY: coverage-report
 coverage-report: ## Display coverage percentage from coverage.xml
 	@if [ -f coverage.xml ]; then \
