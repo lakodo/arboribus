@@ -28,9 +28,9 @@ classifiers = [
 arboribus = "arboribus.cli:main"
 
 [project.urls]
-Homepage = "https://9hgg.github.io/arboribus/"
-Repository = "https://github.com/9hgg/arboribus"
-Documentation = "https://9hgg.github.io/arboribus/"
+Homepage = "https://lakodo.github.io/arboribus/"
+Repository = "https://github.com/lakodo/arboribus"
+Documentation = "https://lakodo.github.io/arboribus/"
 
 [dependency-groups]
 dev = [
