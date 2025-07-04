@@ -179,8 +179,4 @@ def test_apply_command(temp_dirs):
     # Check that files were synced
     assert (target_dir / "libs" / "admin" / "test.py").exists()
     assert (target_dir / "libs" / "auth" / "test.py").exists()
-    assert not (target_dir / "libs" / "core" / "test.py").exists()  # Should not match libs/a*arboribus.foo import foo
-
-
-def test_foo():
-    assert foo("foo") == "foo"
+    assert not (target_dir / "libs" / "core" / "test.py").exists()  # Should not match libs/a*
