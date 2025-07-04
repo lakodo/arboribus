@@ -4,7 +4,6 @@ import fnmatch
 import glob
 import hashlib
 import json
-import logging
 import os
 import shutil
 import subprocess
@@ -19,18 +18,9 @@ from rich.console import Console
 from rich.table import Table
 from rich.prompt import Prompt, Confirm
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn, TimeRemainingColumn
-from rich.logging import RichHandler
 
 app = typer.Typer(help="🪵 Arboribus - Sync folders from monorepo to external targets")
 console = Console()
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[RichHandler(console=console, show_time=False)]
-)
-logger = logging.getLogger("arboribus")
 
 
 def get_config_path(source_dir: Path) -> Path:
@@ -337,13 +327,14 @@ def process_path(source_path: Path, target_path: Path, source_dir: Path, git_tra
     Returns True if the path was processed (or would be in dry mode), False if ignored.
     """
     relative_path = source_path.relative_to(source_dir)
+    relative_target = target_path.relative_to(target_path.parent.parent) if target_path.parent.parent.exists() else target_path.name
     
     # Check if path is git-tracked
     if git_tracked_files is not None:
         if source_path.is_file():
             # For files, check if they're tracked
             if str(relative_path) not in git_tracked_files:
-                console.print(f"[dim]Ignoring {relative_path} (not git-tracked)[/dim]")
+                console.print(f"[dim]{relative_path} -> {relative_target} (filtered out - not git-tracked)[/dim]")
                 return False
         elif source_path.is_dir():
             # For directories, check if they contain any tracked files
@@ -352,41 +343,50 @@ def process_path(source_path: Path, target_path: Path, source_dir: Path, git_tra
                 for tracked_file in git_tracked_files
             )
             if not has_tracked_files:
-                console.print(f"[dim]Ignoring {relative_path} (no git-tracked files)[/dim]")
+                console.print(f"[dim]{relative_path} -> {relative_target} (filtered out - no git-tracked files)[/dim]")
                 return False
     
     # Check if target already exists (only for files, not directories)
     if target_path.exists() and source_path.is_file():
-        # For files, check if they have the same checksum
-        if target_path.is_file():
-            source_checksum = get_file_checksum(source_path)
-            target_checksum = get_file_checksum(target_path)
-            
-            if source_checksum and target_checksum and source_checksum == target_checksum:
-                console.print(f"[dim]Skipping {relative_path} (identical checksum - already up to date)[/dim]")
-                return False
-        
         if not replace_existing:
-            console.print(f"[dim]Ignoring {relative_path} (target exists, use --replace-existing to overwrite)[/dim]")
+            # For files, check if they have the same checksum
+            if target_path.is_file():
+                source_checksum = get_file_checksum(source_path)
+                target_checksum = get_file_checksum(target_path)
+                
+                if source_checksum and target_checksum and source_checksum == target_checksum:
+                    console.print(f"[dim]{relative_path} -> {relative_target} (same - skipped)[/dim]")
+                    return False
+            
+            console.print(f"[dim]{relative_path} -> {relative_target} (exists - skipped, use --replace-existing)[/dim]")
             return False
         else:
+            # replace_existing is True - we will replace regardless of checksum
             if dry:
-                console.print(f"[yellow]DRY RUN:[/yellow] Would replace existing [cyan]{target_path}[/cyan]")
+                console.print(f"[yellow]{relative_path} -> {relative_target} (would replace existing)[/yellow]")
+                return True
             else:
-                console.print(f"[yellow]Replacing existing {target_path}[/yellow]")
+                # Don't print here, let the actual copy operation below handle the message
+                pass
     
     # Process the path
     if source_path.is_file():
         if dry:
-            console.print(f"[yellow]DRY RUN:[/yellow] Would copy file [blue]{source_path}[/blue] -> [green]{target_path}[/green]")
+            console.print(f"[yellow]{relative_path} -> {relative_target} (would copy)[/yellow]")
         else:
             # Ensure target directory exists
             target_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source_path, target_path)
-            console.print(f"[green]✓[/green] Copied file [blue]{relative_path}[/blue]")
+            
+            # Check if we're replacing an existing file
+            if target_path.exists() and replace_existing:
+                shutil.copy2(source_path, target_path)
+                console.print(f"[green]{relative_path} -> {relative_target} (replaced)[/green]")
+            else:
+                shutil.copy2(source_path, target_path)
+                console.print(f"[green]{relative_path} -> {relative_target} (copied)[/green]")
     elif source_path.is_dir():
         if dry:
-            console.print(f"[yellow]DRY RUN:[/yellow] Would sync directory [blue]{source_path}[/blue] -> [green]{target_path}[/green]")
+            console.print(f"[yellow]{relative_path} -> {relative_target} (would sync directory)[/yellow]")
         else:
             # Remove target if it exists and we're replacing
             if target_path.exists() and replace_existing:
@@ -413,9 +413,9 @@ def process_path(source_path: Path, target_path: Path, source_dir: Path, git_tra
             
             try:
                 shutil.copytree(source_path, target_path, ignore=ignore_func, dirs_exist_ok=replace_existing)
-                console.print(f"[green]✓[/green] Synced directory [blue]{relative_path}[/blue]")
+                console.print(f"[green]{relative_path} -> {relative_target} (synced directory)[/green]")
             except Exception as e:
-                console.print(f"[red]Error syncing directory {relative_path}: {e}[/red]")
+                console.print(f"[red]{relative_path} -> {relative_target} (error: {e})[/red]")
                 return False
     
     return True
@@ -757,6 +757,11 @@ def apply(
                 files = collect_files_recursive(path, source_dir, git_tracked_files)
                 all_files_to_process.extend(files)
         
+        # Apply limit to actual processing, not just preview
+        if limit > 0 and len(all_files_to_process) > limit:
+            console.print(f"[yellow]⚠️  Limiting processing to first {limit} files (out of {len(all_files_to_process):,} total)[/yellow]")
+            all_files_to_process = all_files_to_process[:limit]
+        
         # Sync selected files with progress bar
         console.print(f"\n[bold green]🚀 Starting sync of {len(all_files_to_process)} files...[/bold green]")
         
@@ -791,8 +796,6 @@ def apply(
                 progress.update(task, description=f"[cyan]Processing {relative_path}...")
                 
                 try:
-                    logger.info(f"Processing {relative_path} -> {target_path}")
-                    
                     if reverse:
                         # In reverse mode, swap source and target
                         was_processed = process_path(target_path, source_file, source_dir, git_tracked_files, dry, replace_existing)
@@ -801,14 +804,11 @@ def apply(
                     
                     if was_processed:
                         processed_count += 1
-                        logger.info(f"✓ Successfully processed {relative_path}")
                     else:
                         skipped_count += 1
-                        logger.info(f"⊘ Skipped {relative_path}")
                         
                 except Exception as e:
                     error_count += 1
-                    logger.error(f"✗ Error processing {relative_path}: {e}")
                     console.print(f"[red]Error processing {relative_path}: {e}[/red]")
                 
                 # Update progress
