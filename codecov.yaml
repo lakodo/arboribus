@@ -7,3 +7,12 @@ coverage:
       default:
         target: 90%
         threshold: 0.5%
+    patch:
+      default:
+        target: 90%
+        threshold: 0.5%
+
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false

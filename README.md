@@ -1,15 +1,14 @@
 # arboribus
 
-[![Release](https://img.shields.io/github/v/release/9hgg/arboribus)](https://img.shields.io/github/v/release/9hgg/arboribus)
-[![Build status](https://img.shields.io/github/actions/workflow/status/9hgg/arboribus/main.yml?branch=main)](https://github.com/9hgg/arboribus/actions/workflows/main.yml?query=branch%3Amain)
-[![codecov](https://codecov.io/gh/9hgg/arboribus/branch/main/graph/badge.svg)](https://codecov.io/gh/9hgg/arboribus)
-[![Commit activity](https://img.shields.io/github/commit-activity/m/9hgg/arboribus)](https://img.shields.io/github/commit-activity/m/9hgg/arboribus)
-[![License](https://img.shields.io/github/license/9hgg/arboribus)](https://img.shields.io/github/license/9hgg/arboribus)
+[![Release](https://img.shields.io/github/v/release/lakodo/arboribus)](https://github.com/lakodo/arboribus/releases)
+[![codecov](https://codecov.io/gh/lakodo/arboribus/branch/main/graph/badge.svg)](https://codecov.io/gh/lakodo/arboribus)
+[![Commit activity](https://img.shields.io/github/commit-activity/m/lakodo/arboribus)](https://github.com/lakodo/arboribus/graphs/commit-activity)
+[![License](https://img.shields.io/github/license/lakodo/arboribus)](https://github.com/lakodo/arboribus/blob/main/LICENSE)
 
 Sync folders to split/merge/partially share monorepos
 
-- **Github repository**: <https://github.com/9hgg/arboribus/>
-- **Documentation** <https://9hgg.github.io/arboribus/>
+- **Github repository**: <https://github.com/lakodo/arboribus/>
+- **Documentation** <https://lakodo.github.io/arboribus/>
 
 ## Usage
 
@@ -220,7 +219,7 @@ uv add arboribus
 ### From source
 
 ```bash
-git clone https://github.com/9hgg/arboribus.git
+git clone https://github.com/lakodo/arboribus.git
 cd arboribus
 uv sync
 uv run arboribus --help
