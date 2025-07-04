@@ -71,7 +71,7 @@ def test_init_command_nonexistent_target(temp_dirs):
     """Test init command with nonexistent target directory."""
     source_dir, _ = temp_dirs
     runner = CliRunner()
-    
+
     with patch("typer.prompt", return_value="test-target"):
         result = runner.invoke(app, ["init", "--source", str(source_dir), "--target", "/nonexistent/path"])
         assert result.exit_code == 1
@@ -98,11 +98,11 @@ def test_add_rule_command(temp_dirs):
 def test_add_rule_command_no_config():
     """Test add-rule command without existing configuration."""
     runner = CliRunner()
-    
+
     with tempfile.TemporaryDirectory() as temp_dir:
         source_dir = Path(temp_dir) / "source"
         source_dir.mkdir()
-        
+
         result = runner.invoke(
             app, ["add-rule", "--source", str(source_dir), "--pattern", "libs/*", "--target", "nonexistent"]
         )
@@ -130,25 +130,31 @@ def test_remove_rule_command(temp_dirs):
     """Test the remove-rule command."""
     source_dir, target_dir = temp_dirs
     runner = CliRunner()
-    
+
     # Setup
     with patch("typer.prompt", return_value="test-target"):
         runner.invoke(app, ["init", "--source", str(source_dir), "--target", str(target_dir)])
-    
+
     runner.invoke(app, ["add-rule", "--source", str(source_dir), "--pattern", "libs/admin", "--target", "test-target"])
-    
+
     # Remove existing rule
-    result = runner.invoke(app, ["remove-rule", "--source", str(source_dir), "--pattern", "libs/admin", "--target", "test-target"])
+    result = runner.invoke(
+        app, ["remove-rule", "--source", str(source_dir), "--pattern", "libs/admin", "--target", "test-target"]
+    )
     assert result.exit_code == 0
     assert "Removed pattern" in result.stdout
-    
+
     # Try to remove non-existent rule
-    result = runner.invoke(app, ["remove-rule", "--source", str(source_dir), "--pattern", "nonexistent", "--target", "test-target"])
+    result = runner.invoke(
+        app, ["remove-rule", "--source", str(source_dir), "--pattern", "nonexistent", "--target", "test-target"]
+    )
     assert result.exit_code == 0
     assert "not found" in result.stdout
-    
+
     # Test with non-existent target
-    result = runner.invoke(app, ["remove-rule", "--source", str(source_dir), "--pattern", "test", "--target", "nonexistent"])
+    result = runner.invoke(
+        app, ["remove-rule", "--source", str(source_dir), "--pattern", "test", "--target", "nonexistent"]
+    )
     assert result.exit_code == 1
     assert "not found" in result.stdout
 
@@ -319,7 +325,9 @@ def test_apply_command_no_matches(temp_dirs):
         runner.invoke(app, ["init", "--source", str(source_dir), "--target", str(target_dir)])
 
     # Add pattern that won't match anything
-    runner.invoke(app, ["add-rule", "--source", str(source_dir), "--pattern", "nonexistent/*", "--target", "test-target"])
+    runner.invoke(
+        app, ["add-rule", "--source", str(source_dir), "--pattern", "nonexistent/*", "--target", "test-target"]
+    )
 
     result = runner.invoke(app, ["apply", "--source", str(source_dir)])
     assert result.exit_code == 0
@@ -329,22 +337,23 @@ def test_apply_command_no_matches(temp_dirs):
 def test_command_without_source_no_default():
     """Test commands without --source when no default is available."""
     runner = CliRunner()
-    
+
     with tempfile.TemporaryDirectory() as temp_dir:
         # Change to temp directory that has no arboribus.toml
         import os
+
         original_cwd = os.getcwd()
         try:
             os.chdir(temp_dir)
-            
+
             # Test various commands that should fail without source
             commands = [
                 ["add-rule", "--pattern", "test", "--target", "test"],
                 ["list-rules"],
                 ["print-config"],
-                ["apply"]
+                ["apply"],
             ]
-            
+
             for cmd in commands:
                 result = runner.invoke(app, cmd)
                 assert result.exit_code == 1
@@ -357,12 +366,12 @@ def test_main_function_no_args():
     """Test main function with no arguments shows help."""
     from arboribus.cli import main
     import sys
-    
+
     # Mock sys.argv to have only the script name
     original_argv = sys.argv
     try:
         sys.argv = ["arboribus"]
-        
+
         # The main function should call app with ["--help"]
         # This is tested indirectly by ensuring it doesn't crash
         # and the help behavior is handled by typer
@@ -377,14 +386,161 @@ def test_main_function_with_args():
     """Test main function with arguments."""
     from arboribus.cli import main
     import sys
-    
+
     # Mock sys.argv with some arguments
     original_argv = sys.argv
     try:
         sys.argv = ["arboribus", "init"]
-        
+
         with patch("arboribus.cli.app") as mock_app:
             main()
             mock_app.assert_called_once_with()
     finally:
         sys.argv = original_argv
+
+
+def test_print_file_statistics():
+    """Test the print_file_statistics function."""
+    from arboribus.cli import print_file_statistics
+
+    # Test with empty stats
+    print_file_statistics({})
+
+    # Test with only totals
+    print_file_statistics({"[TOTAL FILES]": 10, "[TOTAL DIRS]": 5})
+
+    # Test with file extensions
+    stats = {"[TOTAL FILES]": 100, "[TOTAL DIRS]": 20, ".py": 50, ".js": 30, ".md": 20}
+    print_file_statistics(stats)
+
+
+def test_add_rule_with_exclude_pattern(temp_dirs):
+    """Test add-rule command with exclude patterns."""
+    source_dir, target_dir = temp_dirs
+    runner = CliRunner()
+
+    # Setup
+    with patch("typer.prompt", return_value="test-target"):
+        runner.invoke(app, ["init", "--source", str(source_dir), "--target", str(target_dir)])
+
+    # Add rule with exclude pattern
+    result = runner.invoke(
+        app,
+        [
+            "add-rule",
+            "--source",
+            str(source_dir),
+            "--pattern",
+            "libs/*",
+            "--target",
+            "test-target",
+            "--exclude",
+            "libs/core",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "Added rule: pattern 'libs/*'" in result.stdout
+
+
+def test_apply_command_with_include_files(temp_dirs):
+    """Test apply command with include-files option."""
+    source_dir, target_dir = temp_dirs
+    runner = CliRunner()
+
+    # Setup
+    with patch("typer.prompt", return_value="test-target"):
+        runner.invoke(app, ["init", "--source", str(source_dir), "--target", str(target_dir)])
+
+    runner.invoke(app, ["add-rule", "--source", str(source_dir), "--pattern", "libs/*.py", "--target", "test-target"])
+
+    # Apply with include-files
+    result = runner.invoke(app, ["apply", "--source", str(source_dir), "--include-files", "--dry"])
+    assert result.exit_code == 0
+
+
+def test_apply_command_with_limit(temp_dirs):
+    """Test apply command with limit option."""
+    source_dir, target_dir = temp_dirs
+    runner = CliRunner()
+
+    # Setup
+    with patch("typer.prompt", return_value="test-target"):
+        runner.invoke(app, ["init", "--source", str(source_dir), "--target", str(target_dir)])
+
+    runner.invoke(app, ["add-rule", "--source", str(source_dir), "--pattern", "libs/*", "--target", "test-target"])
+
+    # Apply with limit
+    result = runner.invoke(app, ["apply", "--source", str(source_dir), "--limit", "1", "--dry"])
+    assert result.exit_code == 0
+
+
+def test_apply_command_with_reverse(temp_dirs):
+    """Test apply command with reverse sync."""
+    source_dir, target_dir = temp_dirs
+    runner = CliRunner()
+
+    # Setup
+    with patch("typer.prompt", return_value="test-target"):
+        runner.invoke(app, ["init", "--source", str(source_dir), "--target", str(target_dir)])
+
+    runner.invoke(app, ["add-rule", "--source", str(source_dir), "--pattern", "libs/*", "--target", "test-target"])
+
+    # Apply with reverse
+    result = runner.invoke(app, ["apply", "--source", str(source_dir), "--reverse", "--dry"])
+    assert result.exit_code == 0
+
+
+def test_apply_command_error_handling(temp_dirs):
+    """Test apply command error handling during file processing."""
+    source_dir, target_dir = temp_dirs
+    runner = CliRunner()
+
+    # Setup
+    with patch("typer.prompt", return_value="test-target"):
+        runner.invoke(app, ["init", "--source", str(source_dir), "--target", str(target_dir)])
+
+    runner.invoke(app, ["add-rule", "--source", str(source_dir), "--pattern", "libs/*", "--target", "test-target"])
+
+    # Mock an error during file processing
+    with patch("arboribus.cli.process_path") as mock_process:
+        mock_process.side_effect = Exception("Test error")
+
+        result = runner.invoke(app, ["apply", "--source", str(source_dir)])
+        assert result.exit_code == 0
+        # Should handle the error gracefully
+
+
+def test_apply_command_with_git_filter(temp_dirs):
+    """Test apply command with git filtering enabled."""
+    source_dir, target_dir = temp_dirs
+    runner = CliRunner()
+
+    # Setup
+    with patch("typer.prompt", return_value="test-target"):
+        runner.invoke(app, ["init", "--source", str(source_dir), "--target", str(target_dir)])
+
+    runner.invoke(app, ["add-rule", "--source", str(source_dir), "--pattern", "libs/*", "--target", "test-target"])
+
+    # Mock git functionality
+    with patch("arboribus.cli.get_git_tracked_files") as mock_git:
+        mock_git.return_value = {"libs/admin/test.py"}
+
+        result = runner.invoke(app, ["apply", "--source", str(source_dir), "--dry"])
+        assert result.exit_code == 0
+        assert "Found 1 git-tracked files" in result.stdout
+
+def test_if_name_main():
+    """Test the if __name__ == '__main__' block."""
+    import subprocess
+    import sys
+
+    # Test running the module directly
+    result = subprocess.run(
+        [sys.executable, "-m", "arboribus.cli", "--help"],
+        capture_output=True,
+        text=True,
+        cwd="/Users/jogue/workspace/lako/arboribus",
+    )
+
+    assert result.returncode == 0
+    assert "arboribus" in result.stdout.lower()

@@ -317,7 +317,10 @@ def process_file_sync(
         return True, f"{relative_path} -> {relative_target} (would copy)"
     else:
         # Ensure target directory exists
-        target_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            return False, f"{relative_path} -> {relative_target} (mkdir error: {e})"
 
         # Copy the file
         try:
@@ -363,7 +366,10 @@ def process_directory_sync(
     else:
         # Remove target if it exists and we're replacing
         if target_path.exists() and replace_existing:
-            shutil.rmtree(target_path)
+            try:
+                shutil.rmtree(target_path)
+            except Exception as e:
+                return False, f"{relative_path} -> {relative_target} (rmtree error: {e})"
 
         def ignore_func(directory: str, files: list[str]) -> list[str]:
             """Ignore function for shutil.copytree."""
