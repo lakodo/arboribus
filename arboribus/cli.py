@@ -256,7 +256,7 @@ def apply(
     reverse: bool = typer.Option(False, "--reverse", "-r", help="Sync from target to source"),
     dry: bool = typer.Option(False, "--dry", "-d", help="Dry run - show what would be done"),
     filter_pattern: Optional[str] = typer.Option(None, "--filter", "-f", help="Filter to specific pattern"),
-    limit: int = typer.Option(100, "--limit", "-l", help="Limit number of files to display (default: 100)"),
+    limit: int = typer.Option(-1, "--limit", "-l", help="Limit number of files to display (default: not applied)"),
     stats_only: bool = typer.Option(False, "--stats-only", help="Only show statistics, don't sync"),
     include_files: bool = typer.Option(False, "--include-files", help="Include individual files in pattern matching"),
     replace_existing: bool = typer.Option(

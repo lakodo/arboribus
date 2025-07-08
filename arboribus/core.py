@@ -79,6 +79,8 @@ def resolve_patterns(
 
             # Apply git filtering if available
             if git_tracked_files is not None:
+                print(direct_path, direct_path.is_dir())
+
                 if direct_path.is_file():
                     # For files, check if they're tracked
                     if str(path_relative) not in git_tracked_files:
@@ -93,9 +95,8 @@ def resolve_patterns(
                         continue
 
             # Apply exclude patterns if specified
-            if exclude_patterns:
-                if any(str(path_relative).startswith(f) for f in exclude_patterns):
-                    continue
+            if exclude_patterns and any(str(path_relative).startswith(f) for f in exclude_patterns):
+                continue
 
             matched_paths.append(direct_path)
             continue
@@ -294,22 +295,21 @@ def process_file_sync(
     )
 
     # Check if file is git-tracked
-    if git_tracked_files is not None:
-        if str(relative_path) not in git_tracked_files:
-            return False, f"{relative_path} -> {relative_target} (filtered out - not git-tracked)"
+    if git_tracked_files is not None and str(relative_path) not in git_tracked_files:
+        return False, f"{relative_path} -> {relative_target} (filtered out - not git-tracked)"
 
+    file_exists_and_is_different = False
     # Check if target already exists
     if target_path.exists():
+        if is_same_file_content(source_path, target_path):
+            return False, f"{relative_path} -> {relative_target} (same - skipped)"
         if not replace_existing:
             # Check if they have the same checksum
-            if is_same_file_content(source_path, target_path):
-                return False, f"{relative_path} -> {relative_target} (same - skipped)"
-
-            return False, f"{relative_path} -> {relative_target} (exists - skipped, use --replace-existing)"
+            return False, f"{relative_path} -> {relative_target} (exists [red]and different[/red] - skipped, use --replace-existing)"
         else:
             # replace_existing is True
             if dry:
-                return True, f"{relative_path} -> {relative_target} (would replace existing)"
+                return True, f"{relative_path} -> {relative_target} (would replace existing (as different))"
 
     # Process the file
     if dry:
